@@ -1,0 +1,24 @@
+# SRE Agent Configuration
+
+services:
+  - name: payment-api
+    thresholds:
+      cpu: 85
+      memory: 80
+      latency: 1000
+  - name: user-service
+    thresholds:
+      cpu: 80
+      memory: 75
+      latency: 800
+
+monitoring:
+  interval: 60  # seconds
+  retention: 7   # days
+
+actions:
+  scale:
+    min_replicas: 2
+    max_replicas: 10
+  restart:
+    timeout: 300  # seconds

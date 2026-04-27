@@ -1,0 +1,21 @@
+{
+  "scenario_name": "high_latency",
+  "description": "Service experiencing high latency due to resource constraints",
+  "trigger": {
+    "service": "payment-api",
+    "condition": "latency > 1000ms"
+  },
+  "metrics": {
+    "cpu": 92,
+    "memory": 70,
+    "latency": 1200,
+    "request_rate": 5000
+  },
+  "logs": [
+    "ERROR: timeout connecting to db",
+    "WARN: retry attempt",
+    "WARN: connection pool exhausted"
+  ],
+  "expected_action": "scale",
+  "expected_outcome": "Increase replicas to handle load"
+}
