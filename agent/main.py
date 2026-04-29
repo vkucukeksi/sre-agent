@@ -1,9 +1,4 @@
-import sys
-import os
-
-sys.path.append(os.path.dirname(__file__))
-
-from core import run_agent
+from agent.core import run_agent
 
 if __name__ == "__main__":
     print("Starting agent...")

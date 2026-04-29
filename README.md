@@ -9,6 +9,8 @@ An autonomous Site Reliability Engineering agent that monitors services and take
 - Service restart capabilities
 - Log analysis and alerting
 - Scenario-based testing
+- Config-driven remediation decisions
+- Allowlisted remediation script execution
 
 ## Project Structure
 
@@ -43,12 +45,20 @@ An autonomous Site Reliability Engineering agent that monitors services and take
    python -m agent.main
    ```
 
+4. Run tests:
+   ```bash
+   python -m unittest discover -s tests
+   ```
+
 ## Configuration
 
 See `config.yaml` for service thresholds, monitoring intervals, and action parameters.
+
+The agent currently uses mock observability data from `tools/observability.py`. Replace that module with your Prometheus, CloudWatch, Grafana, or log provider integration before using this against live services.
 
 ## Development
 
 - Add new scenarios to `scenarios/` folder
 - Modify scripts in `scripts/` for custom actions
+- Register new remediation actions in `tools/executor.py`
 - Update `agent/prompt.py` for agent behavior customization
