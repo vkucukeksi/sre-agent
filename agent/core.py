@@ -12,11 +12,28 @@ def decide_action(metrics, logs, thresholds):
     ]
     has_errors = any("ERROR" in line.upper() for line in logs)
 
+    # Case 1: Thresholds breached → scale
     if breached:
-        return "scale", {"breached_thresholds": breached}
+        return "scale", {
+            "breached_thresholds": breached,
+            "reason": f"Thresholds exceeded: {', '.join(breached)}",
+            "confidence": min(1.0, len(breached) * 0.3),
+        }
+
+    # Case 2: Errors in logs → restart
     if has_errors:
-        return "restart", {"breached_thresholds": [], "reason": "errors_detected"}
-    return "none", {"breached_thresholds": [], "reason": "no_action_required"}
+        return "restart", {
+            "breached_thresholds": [],
+            "reason": "Errors detected in logs",
+            "confidence": 0.6,
+        }
+            
+     # Case 3: No issues → do nothing
+    return "none", {
+        "breached_thresholds": [],
+        "reason": "No action required",
+        "confidence": 0.9,
+    }
 
 
 def run_agent(
