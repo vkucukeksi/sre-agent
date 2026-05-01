@@ -2,9 +2,12 @@ from agent.config import get_service_config, load_config
 from tools.executor import run_remediation
 from tools.observability import get_logs, get_metrics
 
+from agent.ai import decide_action_ai
+import json
+
 
 def decide_action(metrics, logs, thresholds):
-    """Choose a remediation action from metrics and logs."""
+    """Fallback rule-based decision."""
     breached = [
         name
         for name, limit in thresholds.items()
@@ -12,7 +15,6 @@ def decide_action(metrics, logs, thresholds):
     ]
     has_errors = any("ERROR" in line.upper() for line in logs)
 
-    # Case 1: Thresholds breached → scale
     if breached:
         return "scale", {
             "breached_thresholds": breached,
@@ -20,15 +22,13 @@ def decide_action(metrics, logs, thresholds):
             "confidence": min(1.0, len(breached) * 0.3),
         }
 
-    # Case 2: Errors in logs → restart
     if has_errors:
         return "restart", {
             "breached_thresholds": [],
             "reason": "Errors detected in logs",
             "confidence": 0.6,
         }
-            
-     # Case 3: No issues → do nothing
+
     return "none", {
         "breached_thresholds": [],
         "reason": "No action required",
@@ -56,8 +56,21 @@ def run_agent(
     print(f"[INFO] Metrics: {metrics}")
     print(f"[INFO] Logs: {logs}")
 
-    action, decision = decide_action(metrics, logs, thresholds)
+    # --- AI Decision ---
+    try:
+        ai_response = decide_action_ai(metrics, logs, thresholds)
+        parsed = json.loads(ai_response)
 
+        action = parsed.get("action", "none")
+        decision = parsed
+
+    except Exception as e:
+        print(f"[WARN] AI failed, falling back to rules: {e}")
+        action, decision = decide_action(metrics, logs, thresholds)
+
+    print(f"[DECISION] Action: {action} | Reason: {decision.get('reason')}")
+
+    # --- Execution ---
     if action == "none":
         result = {
             "success": True,
