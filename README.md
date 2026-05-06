@@ -17,6 +17,7 @@ An autonomous Site Reliability Engineering agent that monitors services and take
 ```
 .
 ├── agent/              # Core agent logic
+│   ├── __init__.py    # Package marker
 │   ├── core.py        # Main agent execution
 │   ├── main.py        # Entry point
 │   └── prompt.py      # Agent prompts
@@ -28,7 +29,11 @@ An autonomous Site Reliability Engineering agent that monitors services and take
 │   └── scale-service.ps1
 ├── scenarios/         # Test scenarios
 │   └── high_latency.json
-└── config.yaml        # Configuration
+├── tests/             # Unit tests
+│   └── test_agent.py
+├── config.yaml        # Configuration
+├── requirements.txt   # Python dependencies
+└── README.md          # Project documentation
 ```
 
 ## Getting Started
