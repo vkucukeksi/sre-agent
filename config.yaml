@@ -6,6 +6,11 @@ services:
       cpu: 85
       memory: 80
       latency: 1000
+  - name: sre-vm-dev
+    thresholds:
+      cpu: 85
+      memory: 780
+      latency: 1000
   - name: user-service
     thresholds:
       cpu: 80

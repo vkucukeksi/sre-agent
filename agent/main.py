@@ -4,7 +4,7 @@ if __name__ == "__main__":
     print("Starting agent...")
 
     event = {
-        "service": "payment-api",
+        "service": "sre-vm-dev",
         "issue": "high latency"
     }
 

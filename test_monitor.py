@@ -1,7 +1,3 @@
-from dotenv import dotenv_values
-
-print(dotenv_values(".env"))
-
 from tools.azure_monitor import query_logs
 
 query = """
@@ -11,4 +7,9 @@ Heartbeat
 
 results = query_logs(query)
 
-print(results)
+for row in results:
+    print(
+        f"VM={row['Computer']} | "
+        f"OS={row['OSName']} {row['OSMajorVersion']} | "
+        f"Agent={row['Category']}"
+    )

@@ -9,8 +9,6 @@ load_dotenv()
 
 workspace_id = os.getenv("AZURE_LOG_ANALYTICS_WORKSPACE_ID")
 
-print(f"Workspace ID: {workspace_id}")
-
 credential = DefaultAzureCredential()
 client = LogsQueryClient(credential)
 
