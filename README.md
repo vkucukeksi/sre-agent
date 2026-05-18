@@ -1,103 +1,135 @@
 # SRE Agent
 
-An autonomous Site Reliability Engineering agent that monitors services and takes corrective actions.
+An autonomous Site Reliability Engineering agent that collects service signals, asks Azure OpenAI for a remediation decision, and safely runs allowlisted recovery scripts.
 
 ## Features
 
--  **Observability Analysis**
-  - Monitors CPU, memory, latency
-  - Parses logs for error signals
+- **Azure observability**
+  - Queries Azure Log Analytics through `LogsQueryClient`
+  - Reads recent VM heartbeat data for the target service
+  - Keeps temporary mock metrics in place until live metrics are wired in
 
--  **Decision Engine**
-  - AI-based decisions (OpenAI / Azure OpenAI)
-  - Automatic fallback to rule-based logic if AI is unavailable
+- **Decision engine**
+  - Uses Azure OpenAI for JSON remediation decisions
+  - Falls back to deterministic rule-based logic if AI is unavailable
+  - Supports `scale`, `restart`, and `none` actions
 
--  **Safe Execution**
-  - Allowlisted remediation scripts only
-  - Input validation to prevent command injection
+- **Safe execution**
+  - Runs only allowlisted PowerShell remediation scripts
+  - Validates service names before execution
+  - Returns structured execution results
 
--  **Testing**
-  - Scenario-driven testing
-  - Dependency injection for observability and execution layers
+- **Testing**
+  - Scenario-driven agent tests
+  - Dependency injection for metrics, logs, and execution
+  - Safety tests for unsupported actions, invalid service names, and non-allowlisted scripts
 
 ## Project Structure
 
-```
+```text
 .
-├── agent/ # Core agent logic
-│ ├── core.py # Main agent execution
-│ ├── config.py # Configuration loader
-│ ├── ai.py # AI decision logic
-│ └── main.py # Entry point
-│
-├── tools/ # Utility modules
-│ ├── executor.py # Safe script execution
-│ └── observability.py # Metrics & logs
-│
-├── scripts/ # PowerShell remediation scripts
-│ ├── restart-service.ps1
-│ └── scale-service.ps1
-│
-├── scenarios/ # Test scenarios
-│ └── high_latency.json
-│
-├── tests/ # Unit tests
-│ └── test_agent.py
-│
+├── agent/
+│   ├── ai.py              # Azure OpenAI decision logic
+│   ├── config.py          # Configuration loader
+│   ├── core.py            # Agent orchestration and fallback decisions
+│   ├── main.py            # Local entry point
+│   └── prompt.py          # Prompt customization
+├── tools/
+│   ├── azure_monitor.py   # Azure Log Analytics client/query helper
+│   ├── executor.py        # Safe remediation execution
+│   └── observability.py   # Logs and metrics providers
+├── scripts/
+│   ├── restart-service.ps1
+│   └── scale-service.ps1
+├── scenarios/
+│   └── high_latency.json
+├── tests/
+│   └── test_agent.py
 ├── config.yaml
-└── README.md
+├── test_monitor.py        # Manual Azure Log Analytics smoke test
+└── requirements.txt
 ```
-##  Decision Flow
 
-1. Collect metrics and logs  
-2. Attempt AI-based decision  
-3. If AI fails → fallback to rule-based logic  
-4. Execute remediation safely  
-5. Return structured result  
+## Decision Flow
 
----
+1. Load the target service from `config.yaml`.
+2. Collect metrics and logs for the service.
+3. Ask Azure OpenAI for a JSON remediation decision.
+4. Fall back to rule-based logic if the AI call fails.
+5. Run the selected remediation through the safe executor.
+6. Return the service, action, decision details, and execution result.
 
 ## Getting Started
 
 1. Install dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
 
-2. Configure services in `config.yaml`
+2. Configure services and thresholds in `config.yaml`.
 
-3. Run the agent:
+3. Set the required environment variables:
+
+   ```powershell
+   $env:AZURE_OPENAI_API_KEY="your-api-key"
+   $env:AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
+   $env:AZURE_OPENAI_DEPLOYMENT="your-deployment-name"
+   $env:AZURE_LOG_ANALYTICS_WORKSPACE_ID="your-workspace-id"
+   ```
+
+   You can also place these values in a local `.env` file.
+
+4. Authenticate to Azure for Log Analytics access. The app uses `DefaultAzureCredential`, so Azure CLI login, managed identity, or another supported Azure identity can be used.
+
+5. Run the agent:
+
    ```bash
    python -m agent.main
    ```
 
-4. Run tests:
+6. Run tests:
+
    ```bash
    python -m unittest discover -s tests
    ```
 
-## AI Configuration
+## Configuration
 
-$env:OPENAI_API_KEY="your-api-key"
+`config.yaml` defines the services the agent is allowed to evaluate and the thresholds used by the fallback decision logic. Current service entries include:
 
-If AI is unavailable (e.g. quota exceeded), the agent automatically falls back to rule-based decisions.
+- `payment-api`
+- `sre-vm-dev`
+- `user-service`
 
-See `config.yaml` for service thresholds, monitoring intervals, and action parameters.
+The entry point currently sends a sample high-latency event for `sre-vm-dev`.
 
-The agent currently uses mock observability data from `tools/observability.py`. Replace that module with your Prometheus, CloudWatch, Grafana, or log provider integration before using this against live services.
+## Azure Monitoring
+
+`tools/azure_monitor.py` wraps Azure Log Analytics queries. `tools/observability.py` uses it to query the `Heartbeat` table and return recent heartbeat log lines for the requested service:
+
+```kusto
+Heartbeat
+| where Computer contains "<service>"
+| take 5
+```
+
+`test_monitor.py` can be used as a quick manual smoke test for Log Analytics connectivity.
+
+Metrics are still temporary static values in `tools/observability.py`; replace `get_metrics` with Azure Monitor, Prometheus, CloudWatch, or another metrics provider before relying on the agent for live remediation.
 
 ## Development
 
-- Add new scenarios to `scenarios/` folder
-- Modify scripts in `scripts/` for custom actions
-- Register new remediation actions in `tools/executor.py`
-- Update `agent/prompt.py` for agent behavior customization
+- Add new scenarios to `scenarios/`.
+- Adjust service thresholds in `config.yaml`.
+- Modify remediation scripts in `scripts/`.
+- Register new remediation actions in `tools/executor.py`.
+- Update `agent/prompt.py` or `agent/ai.py` for decision behavior changes.
 
 ## Future Improvements
 
-- Azure Monitor / Prometheus integration
-- Kubernetes support
+- Live Azure Monitor metrics integration
+- Kubernetes remediation support
 - Multi-step AI reasoning
 - Incident correlation across services
- -Dashboard / UI
-
+- Dashboard or UI
